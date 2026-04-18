@@ -1,0 +1,300 @@
+/* ================= RESET ================= */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: Arial, sans-serif;
+}
+
+/* ================= BODY ================= */
+body {
+  background: #111827;
+  color: #e5e7eb;
+  height: 100vh;
+}
+
+/* ================= LAYOUT ================= */
+.app {
+  display: flex;
+  height: 100vh;
+}
+
+/* ================= SIDEBAR ================= */
+.sidebar {
+  width: 240px;
+  background: #0b1220;
+  padding: 16px;
+  border-right: 1px solid #1e293b;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar h2 {
+  font-size: 18px;
+  margin-bottom: 16px;
+  color: #ffffff;
+}
+
+/* BOTÓN NUEVO CHAT */
+.new-chat {
+  width: 100%;
+  padding: 10px;
+  background: #2b6bff;
+  border: none;
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  margin-bottom: 12px;
+}
+
+.new-chat:hover {
+  background: #3b7cff;
+}
+
+/* LISTA */
+.chat-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto;
+  margin-top: 10px;
+}
+
+.chat-item {
+  padding: 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  background: transparent;
+  font-size: 14px;
+}
+
+.chat-item:hover {
+  background: #1f2a44;
+}
+
+.chat-item.active {
+  background: #2b6bff;
+}
+
+/* ================= CHAT AREA ================= */
+.chat-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #111827;
+}
+
+/* ================= MENSAJES ================= */
+.messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ================= BURBUJAS ================= */
+.message {
+  max-width: 600px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  border-radius: 12px;
+  line-height: 1.5;
+  font-size: 14px;
+
+  /* 🔵 MEJORA REAL DE LECTURA */
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* BOT */
+.bot {
+  background: #1f2a44;
+  color: #e5e7eb;
+}
+
+/* USER */
+.user {
+  background: #2b6bff;
+  color: white;
+  align-self: flex-end;
+}
+
+/* ================= INPUT (ADAPTADO A TEXTAREA PRO) ================= */
+.input-area {
+  display: flex;
+  padding: 16px;
+  border-top: 1px solid #1e293b;
+  background: #0b1220;
+  align-items: flex-end; /* Mantiene el botón abajo si el texto crece */
+}
+
+.input-area textarea {
+  flex: 1;
+  padding: 14px;
+  border-radius: 8px;
+  border: none;
+  background: #1f2a44;
+  color: white;
+  resize: none; /* Evita que deformen la web */
+  font-family: Arial, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  outline: none;
+  overflow-y: auto;
+}
+
+.input-area button {
+  margin-left: 12px;
+  padding: 14px 20px;
+  border-radius: 8px;
+  border: none;
+  background: #2b6bff;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  height: 50px; /* Misma altura que el textarea */
+}
+
+.input-area button:hover {
+  background: #3b7cff;
+}
+
+/* ================= MARKDOWN PRO (ESTRUCTURA VISUAL GEMINI) ================= */
+
+/* 👉 Textos y Párrafos */
+.message.bot p {
+  margin-bottom: 14px;
+  line-height: 1.7;
+}
+
+/* 👉 Encabezados con jerarquía */
+.message.bot h1,
+.message.bot h2,
+.message.bot h3 {
+  color: #ffffff;
+  margin-top: 24px;
+  margin-bottom: 12px;
+  font-weight: 700;
+}
+
+/* 👉 Listas limpias */
+.message.bot ul,
+.message.bot ol {
+  margin-left: 24px;
+  margin-top: 12px;
+  margin-bottom: 16px;
+}
+
+.message.bot li {
+  margin-bottom: 8px;
+  line-height: 1.6;
+}
+
+/* 👉 Negritas brillantes */
+.message.bot strong {
+  color: #00d2ff;
+  font-weight: 700;
+}
+
+/* 👉 Citas (Blockquotes) */
+.message.bot blockquote {
+  border-left: 4px solid #00d2ff;
+  background-color: rgba(0, 210, 255, 0.05);
+  padding: 12px 16px;
+  margin: 16px 0;
+  border-radius: 0 8px 8px 0;
+  font-style: italic;
+  color: #a0a0b0;
+}
+
+/* 👉 Código en línea (ej: `variable`) - Mantiene tu estilo rosado */
+.message.bot :not(pre) > code {
+  background-color: #2a2a3c;
+  color: #ff79c6;
+  padding: 3px 7px;
+  border-radius: 5px;
+  font-family: monospace;
+  font-size: 0.9em;
+}
+
+/* 👉 Bloques de código gigantes (Highlight.js manda aquí) */
+.message.bot pre {
+  margin: 16px 0;
+  border-radius: 8px;
+  overflow: hidden; /* Corta los bordes para que Highlight.js no se salga */
+  background-color: #0d1117; /* Fondo oscuro de github-dark */
+}
+
+.message.bot pre code {
+  display: block;
+  padding: 16px;
+  overflow-x: auto;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* ================= AMPLIACIÓN RICA NOVA (NO ROMPE NADA) ================= */
+
+/* 👉 Tablas renderizadas dentro del mensaje del bot */
+.message.bot table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0;
+  background: #0f172a;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.message.bot th,
+.message.bot td {
+  border: 1px solid #334155;
+  padding: 10px 12px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.message.bot th {
+  background: #1e293b;
+  color: #00d2ff;
+  font-weight: 700;
+}
+
+.message.bot td {
+  color: #e5e7eb;
+}
+
+/* 👉 Imágenes generadas dentro del mensaje */
+.message.bot img {
+  max-width: 100%;
+  display: block;
+  margin-top: 12px;
+  border-radius: 12px;
+}
+
+/* 👉 Audio dentro del mensaje */
+.message.bot audio {
+  width: 100%;
+  margin-top: 12px;
+  display: block;
+}
+
+/* ================= BOTÓN VOZ MANUAL NOVA ================= */
+
+#readLastBtn {
+  margin-left: 12px;
+  padding: 14px 18px;
+  border-radius: 8px;
+  border: none;
+  background: #1f2a44;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  height: 50px;
+}
+
+#readLastBtn:hover {
+  background: #2b3a5e;
+}

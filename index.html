@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>chatNOVAP</title>
+
+  <link rel="stylesheet" href="styles.css" />
+
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+</head>
+<body>
+  
+<div class="nova-wrapper">
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <h2>chatNOVAP</h2>
+
+    <button id="newChatBtn" class="new-chat" type="button">
+      + Nueva conversación
+    </button>
+
+    <div id="chatList" class="chat-list"></div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="chat-area">
+
+    <div id="messages" class="messages"></div>
+
+    <div class="input-area">
+      <textarea 
+        id="inputMessage"
+        placeholder="Escribe tu mensaje a NOVA... (Shift + Enter para salto de línea)"
+        autocomplete="off"
+        rows="1"
+      ></textarea>
+
+      <button id="readLastBtn" type="button">
+        🔊 Leer
+      </button>
+
+      <button id="sendBtn" type="button">
+        Enviar
+      </button>
+    </div>
+
+  </main>
+
+</div>
+</div> <!-- cierre nova-wrapper -->
+  
+<!-- Carga JS al final y con defer -->
+<script src="app.js" defer></script>
+  
+</body>
+</html>
