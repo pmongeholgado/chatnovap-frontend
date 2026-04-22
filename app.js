@@ -4,6 +4,9 @@ const sendBtn = document.getElementById("sendBtn");
 const readLastBtn = document.getElementById("readLastBtn");
 const newChatBtn = document.getElementById("newChatBtn");
 const chatListEl = document.getElementById("chatList");
+const chatForm = document.getElementById("chatForm");
+const typingIndicatorEl = document.getElementById("typingIndicator");
+const chatStatusTextEl = document.getElementById("chatStatusText");
 
 /* ---------- API LOCAL / RED DEFINITIVA ---------- */
 
@@ -24,27 +27,108 @@ function getApiBaseUrl() {
 
 const API_BASE_URL = getApiBaseUrl();
 
+/* ---------- CONSTANTES ---------- */
+
+const STORAGE_CHATS_KEY = "novap_chats";
+const STORAGE_ACTIVE_KEY = "novap_active";
+const DEFAULT_CHAT_TITLE = "Nueva conversación";
+const DEFAULT_WELCOME_MESSAGE = "Hola 👋 Bienvenido a chatNOVAP";
+
 /* ---------- ESTADO ---------- */
 
 let chats = [];
 let activeChatId = null;
 let isSending = false;
 
+/* ---------- HELPERS BASE ---------- */
+
+function generateChatId() {
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function getActiveChat() {
+  return chats.find(chat => chat.id === activeChatId) || null;
+}
+
+function escapeHtml(text) {
+  return String(text || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function ensureChatShape(chat) {
+  return {
+    id: chat?.id ? String(chat.id) : generateChatId(),
+    title: typeof chat?.title === "string" && chat.title.trim()
+      ? chat.title.trim()
+      : DEFAULT_CHAT_TITLE,
+    messages: Array.isArray(chat?.messages)
+      ? chat.messages.map(message => normalizeMessage(message, message?.sender || "bot"))
+      : []
+  };
+}
+
+function ensureChatsShape(rawChats) {
+  if (!Array.isArray(rawChats)) return [];
+  return rawChats.map(ensureChatShape);
+}
+
+/* ---------- ESTADO VISUAL ---------- */
+
+function setChatStatus(text) {
+  if (!chatStatusTextEl) return;
+  chatStatusTextEl.textContent = text || "Lista para conversar";
+}
+
+function setTypingIndicator(visible) {
+  if (!typingIndicatorEl) return;
+
+  typingIndicatorEl.classList.toggle("hidden", !visible);
+  typingIndicatorEl.setAttribute("aria-hidden", visible ? "false" : "true");
+}
+
+function setSendingState(sending) {
+  isSending = sending;
+
+  if (sendBtn) {
+    sendBtn.disabled = sending;
+  }
+
+  if (inputEl) {
+    inputEl.disabled = sending;
+  }
+
+  setTypingIndicator(sending);
+  setChatStatus(sending ? "NOVA está pensando..." : "Lista para conversar");
+}
+
+function autoResizeTextarea() {
+  if (!inputEl) return;
+  inputEl.style.height = "auto";
+  inputEl.style.height = `${Math.min(inputEl.scrollHeight, 180)}px`;
+}
+
 /* ---------- PERSISTENCIA ---------- */
 
 function saveState() {
-  localStorage.setItem("novap_chats", JSON.stringify(chats));
-  localStorage.setItem("novap_active", activeChatId || "");
+  try {
+    localStorage.setItem(STORAGE_CHATS_KEY, JSON.stringify(chats));
+    localStorage.setItem(STORAGE_ACTIVE_KEY, activeChatId || "");
+  } catch (error) {
+    console.error("chatNOVAP saveState error:", error);
+  }
 }
 
 function loadState() {
   try {
-    const saved = localStorage.getItem("novap_chats");
-    const savedActive = localStorage.getItem("novap_active");
+    const savedChats = localStorage.getItem(STORAGE_CHATS_KEY);
+    const savedActive = localStorage.getItem(STORAGE_ACTIVE_KEY);
 
-    chats = saved ? JSON.parse(saved) : [];
+    chats = ensureChatsShape(savedChats ? JSON.parse(savedChats) : []);
     activeChatId = savedActive || null;
-  } catch {
+  } catch (error) {
+    console.error("chatNOVAP loadState error:", error);
     chats = [];
     activeChatId = null;
   }
@@ -70,11 +154,7 @@ function formatText(text) {
   if (!text) return "";
 
   if (!window.marked || typeof window.marked.parse !== "function") {
-    return text
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/\n/g, "<br>");
+    return escapeHtml(text).replace(/\n/g, "<br>");
   }
 
   let html = window.marked.parse(text);
@@ -92,10 +172,11 @@ function buildBotContentHtml(text, imageUrl = null, audioUrl = null) {
   let html = formatText(text || "");
 
   if (imageUrl) {
+    const safeImageUrl = escapeHtml(imageUrl);
     html += `
       <div style="margin-top:12px;">
         <img
-          src="${imageUrl}"
+          src="${safeImageUrl}"
           alt="Imagen generada por chatNOVAP"
           style="max-width:100%; border-radius:12px; display:block;"
         >
@@ -104,9 +185,10 @@ function buildBotContentHtml(text, imageUrl = null, audioUrl = null) {
   }
 
   if (audioUrl) {
+    const safeAudioUrl = escapeHtml(audioUrl);
     html += `
       <div style="margin-top:12px;">
-        <audio controls src="${audioUrl}" style="width:100%;"></audio>
+        <audio controls src="${safeAudioUrl}" style="width:100%;"></audio>
       </div>
     `;
   }
@@ -114,7 +196,25 @@ function buildBotContentHtml(text, imageUrl = null, audioUrl = null) {
   return html;
 }
 
-/* ---------- UI ---------- */
+/* ---------- MENSAJES ---------- */
+
+function normalizeMessage(messageOrText, sender) {
+  if (typeof messageOrText === "string") {
+    return {
+      text: messageOrText,
+      sender,
+      imageUrl: null,
+      audioUrl: null
+    };
+  }
+
+  return {
+    text: messageOrText?.text || "",
+    sender: messageOrText?.sender || sender || "bot",
+    imageUrl: messageOrText?.imageUrl || null,
+    audioUrl: messageOrText?.audioUrl || null
+  };
+}
 
 function scrollMessagesToBottom() {
   requestAnimationFrame(() => {
@@ -122,13 +222,103 @@ function scrollMessagesToBottom() {
   });
 }
 
+function addMessageToDOM(messageOrText, sender) {
+  const message = normalizeMessage(messageOrText, sender);
+
+  const div = document.createElement("div");
+  div.classList.add("message", message.sender);
+
+  if (message.sender === "user") {
+    div.textContent = message.text;
+  } else {
+    div.innerHTML = buildBotContentHtml(message.text, message.imageUrl, message.audioUrl);
+  }
+
+  messagesEl.appendChild(div);
+  return div;
+}
+
+function renderMessages() {
+  messagesEl.innerHTML = "";
+
+  const chat = getActiveChat();
+  if (!chat) {
+    setChatStatus("Lista para conversar");
+    return;
+  }
+
+  chat.messages.forEach(message => addMessageToDOM(message, message.sender));
+  scrollMessagesToBottom();
+}
+
+function getChatDisplayTitle(chat) {
+  if (chat.title && chat.title.trim()) return chat.title.trim();
+
+  const firstUserMessage = chat.messages.find(message => message.sender === "user" && message.text.trim());
+  if (firstUserMessage) {
+    return firstUserMessage.text.trim().slice(0, 30);
+  }
+
+  return DEFAULT_CHAT_TITLE;
+}
+
+/* ---------- LISTA DE CHATS ---------- */
+
+function renderChatList() {
+  chatListEl.innerHTML = "";
+
+  chats.forEach(chat => {
+    const container = document.createElement("div");
+    container.classList.add("chat-item");
+    container.setAttribute("role", "listitem");
+    container.setAttribute("tabindex", "0");
+    container.setAttribute("aria-label", getChatDisplayTitle(chat));
+
+    if (chat.id === activeChatId) {
+      container.classList.add("active");
+    }
+
+    container.textContent = getChatDisplayTitle(chat);
+
+    container.addEventListener("click", () => {
+      activeChatId = chat.id;
+      saveState();
+      renderChatList();
+      renderMessages();
+      setChatStatus("Lista para conversar");
+    });
+
+    container.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        container.click();
+      }
+    });
+
+    container.addEventListener("dblclick", () => {
+      const newTitle = prompt("Nuevo nombre:", chat.title);
+
+      if (typeof newTitle === "string" && newTitle.trim()) {
+        chat.title = newTitle.trim();
+        saveState();
+        renderChatList();
+      }
+    });
+
+    chatListEl.appendChild(container);
+  });
+}
+
+/* ---------- LECTURA EN VOZ ---------- */
+
 function readLastBotMessage() {
-  const chat = chats.find(c => c.id === activeChatId);
+  const chat = getActiveChat();
   if (!chat) return;
 
   const botMessages = chat.messages.filter(
-    m => m.sender === "bot" && m.text && m.text.trim()
+    message => message.sender === "bot" && message.text && message.text.trim()
   );
+
   if (!botMessages.length) return;
 
   const lastBotMessage = botMessages[botMessages.length - 1].text;
@@ -148,117 +338,24 @@ function readLastBotMessage() {
   window.speechSynthesis.speak(utterance);
 }
 
-function normalizeMessage(messageOrText, sender) {
-  if (typeof messageOrText === "string") {
-    return {
-      text: messageOrText,
-      sender,
-      imageUrl: null,
-      audioUrl: null
-    };
-  }
+/* ---------- CHATS ---------- */
 
+function createWelcomeMessage() {
   return {
-    text: messageOrText.text || "",
-    sender: messageOrText.sender || sender || "bot",
-    imageUrl: messageOrText.imageUrl || null,
-    audioUrl: messageOrText.audioUrl || null
+    text: DEFAULT_WELCOME_MESSAGE,
+    sender: "bot",
+    imageUrl: null,
+    audioUrl: null
   };
 }
 
-function addMessageToDOM(messageOrText, sender) {
-  const message = normalizeMessage(messageOrText, sender);
-
-  const div = document.createElement("div");
-  div.classList.add("message", message.sender);
-
-  if (message.sender === "user") {
-    div.textContent = message.text;
-  } else {
-    div.innerHTML = buildBotContentHtml(message.text, message.imageUrl, message.audioUrl);
-  }
-
-  messagesEl.appendChild(div);
-  scrollMessagesToBottom();
-
-  return div;
-}
-
-function renderMessages() {
-  messagesEl.innerHTML = "";
-
-  const chat = chats.find(c => c.id === activeChatId);
-  if (!chat) return;
-
-  chat.messages.forEach(m => addMessageToDOM(m, m.sender));
-}
-
-function renderChatList() {
-  chatListEl.innerHTML = "";
-
-  chats.forEach(chat => {
-    const container = document.createElement("div");
-    container.classList.add("chat-item");
-
-    if (chat.id === activeChatId) {
-      container.classList.add("active");
-    }
-
-    const title = document.createElement("div");
-    title.classList.add("chat-title");
-    title.textContent = chat.title;
-
-    title.ondblclick = (e) => {
-      e.stopPropagation();
-
-      const newTitle = prompt("Nuevo nombre:", chat.title);
-
-      if (newTitle) {
-        chat.title = newTitle;
-        saveState();
-        renderChatList();
-      }
-    };
-
-    const deleteBtn = document.createElement("button");
-    deleteBtn.textContent = "🗑";
-    deleteBtn.type = "button";
-
-    deleteBtn.onclick = (e) => {
-      e.stopPropagation();
-      deleteChat(chat.id);
-    };
-
-    container.appendChild(title);
-    container.appendChild(deleteBtn);
-
-    container.onclick = () => {
-      activeChatId = chat.id;
-      saveState();
-      renderChatList();
-      renderMessages();
-    };
-
-    chatListEl.appendChild(container);
-  });
-}
-
-/* ---------- CHATS ---------- */
-
 function createNewChat() {
-  const id = Date.now().toString();
+  const id = generateChatId();
 
   chats.unshift({
     id,
-    title: "Nueva conversación",
-    messages: [
-      {
-        text: "Hola 👋 Bienvenido a chatNOVAP",
-        sender: "bot",
-        imageUrl: null,
-        audioUrl: null
-      }
-    ]
+    title: DEFAULT_CHAT_TITLE,
+    messages: [createWelcomeMessage()]
   });
 
   activeChatId = id;
@@ -266,10 +363,11 @@ function createNewChat() {
   saveState();
   renderChatList();
   renderMessages();
+  setChatStatus("Lista para conversar");
 }
 
 function deleteChat(id) {
-  chats = chats.filter(c => c.id !== id);
+  chats = chats.filter(chat => chat.id !== id);
 
   if (activeChatId === id) {
     activeChatId = chats.length ? chats[0].id : null;
@@ -283,6 +381,23 @@ function deleteChat(id) {
   saveState();
   renderChatList();
   renderMessages();
+  setChatStatus("Lista para conversar");
+}
+
+/* ---------- PETICIÓN A BACKEND ---------- */
+
+async function requestRichReply(chatId, text) {
+  const url = `${API_BASE_URL}/rich-reply?chat_id=${encodeURIComponent(chatId)}&message=${encodeURIComponent(text)}`;
+
+  const response = await fetch(url, {
+    method: "POST"
+  });
+
+  if (!response.ok) {
+    throw new Error("Respuesta no válida del servidor");
+  }
+
+  return response.json();
 }
 
 /* ---------- ENVÍO RICO CON APOYO EN GENESIOS ---------- */
@@ -293,119 +408,120 @@ async function sendMessage() {
   const text = inputEl.value.trim();
   if (!text) return;
 
-  const chat = chats.find(c => c.id === activeChatId);
+  const chat = getActiveChat();
   if (!chat) return;
 
-  isSending = true;
+  setSendingState(true);
 
-  chat.messages.push({
+  const userMessage = {
     text,
     sender: "user",
     imageUrl: null,
     audioUrl: null
-  });
+  };
 
-  if (chat.title === "Nueva conversación") {
+  chat.messages.push(userMessage);
+
+  if (chat.title === DEFAULT_CHAT_TITLE) {
     chat.title = text.substring(0, 30);
   }
 
   inputEl.value = "";
-  inputEl.focus();
+  autoResizeTextarea();
 
   saveState();
   renderChatList();
   renderMessages();
 
-  const messageDiv = addMessageToDOM(
-    {
-      text: "NOVA está escribiendo...",
-      sender: "bot",
-      imageUrl: null,
-      audioUrl: null
-    },
-    "bot"
-  );
-  messageDiv.style.opacity = "0.7";
-
-  let dots = 0;
-  const typingInterval = setInterval(() => {
-    dots = (dots + 1) % 4;
-    messageDiv.innerHTML = buildBotContentHtml(
-      "NOVA está escribiendo" + ".".repeat(dots),
-      null,
-      null
-    );
-  }, 400);
-
   try {
-    const url = `${API_BASE_URL}/rich-reply?chat_id=${encodeURIComponent(activeChatId)}&message=${encodeURIComponent(text)}`;
-    const res = await fetch(url, {
-      method: "POST"
-    });
+    const data = await requestRichReply(activeChatId, text);
 
-    if (!res.ok) {
-      throw new Error("Respuesta no válida del servidor");
-    }
+    const finalText = data?.reply || "No se pudo obtener respuesta.";
+    const imageUrl = data?.image_url || null;
+    const audioUrl = data?.audio_url || null;
 
-    const data = await res.json();
-
-    clearInterval(typingInterval);
-    messageDiv.style.opacity = "1";
-
-    const finalText = data.reply || "No se pudo obtener respuesta.";
-    const imageUrl = data.image_url || null;
-    const audioUrl = data.audio_url || null;
-
-    messageDiv.innerHTML = buildBotContentHtml(finalText, imageUrl, audioUrl);
-
-    chat.messages.push({
+    const botMessage = {
       text: finalText,
       sender: "bot",
       imageUrl,
       audioUrl
-    });
+    };
+
+    chat.messages.push(botMessage);
+
+    saveState();
+    renderMessages();
 
     if (audioUrl) {
       try {
         const audio = new Audio(audioUrl);
         audio.play().catch(() => {});
-      } catch (_) {}
+      } catch (error) {
+        console.warn("chatNOVAP audio autoplay warning:", error);
+      }
     }
-  } catch (err) {
-    clearInterval(typingInterval);
-    messageDiv.textContent = "❌ Error conectando con NOVA";
-    messageDiv.style.opacity = "1";
-    console.error("chatNOVAP error:", err);
-  }
+  } catch (error) {
+    console.error("chatNOVAP error:", error);
 
-  isSending = false;
-  saveState();
-  scrollMessagesToBottom();
+    const errorMessage = {
+      text: "❌ Error conectando con NOVA",
+      sender: "bot",
+      imageUrl: null,
+      audioUrl: null
+    };
+
+    chat.messages.push(errorMessage);
+    saveState();
+    renderMessages();
+  } finally {
+    setSendingState(false);
+    inputEl.focus();
+    scrollMessagesToBottom();
+  }
 }
 
 /* ---------- EVENTOS ---------- */
 
-sendBtn.addEventListener("click", (e) => {
-  e.preventDefault();
-  sendMessage();
-});
-
-readLastBtn.addEventListener("click", (e) => {
-  e.preventDefault();
-  readLastBotMessage();
-});
-
-inputEl.addEventListener("keydown", (e) => {
-  if (e.key === "Enter" && !e.shiftKey) {
-    e.preventDefault();
+if (chatForm) {
+  chatForm.addEventListener("submit", (event) => {
+    event.preventDefault();
     sendMessage();
-  }
-});
+  });
+}
 
-newChatBtn.addEventListener("click", (e) => {
-  e.preventDefault();
-  createNewChat();
-});
+if (sendBtn) {
+  sendBtn.addEventListener("click", (event) => {
+    event.preventDefault();
+    sendMessage();
+  });
+}
+
+if (readLastBtn) {
+  readLastBtn.addEventListener("click", (event) => {
+    event.preventDefault();
+    readLastBotMessage();
+  });
+}
+
+if (inputEl) {
+  inputEl.addEventListener("input", () => {
+    autoResizeTextarea();
+  });
+
+  inputEl.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      sendMessage();
+    }
+  });
+}
+
+if (newChatBtn) {
+  newChatBtn.addEventListener("click", (event) => {
+    event.preventDefault();
+    createNewChat();
+  });
+}
 
 /* ---------- INIT ---------- */
 
@@ -414,11 +530,15 @@ loadState();
 if (!chats.length) {
   createNewChat();
 } else {
-  if (!activeChatId || !chats.find(c => c.id === activeChatId)) {
+  if (!activeChatId || !chats.find(chat => chat.id === activeChatId)) {
     activeChatId = chats[0].id;
   }
 
   saveState();
   renderChatList();
   renderMessages();
+  setChatStatus("Lista para conversar");
 }
+
+setTypingIndicator(false);
+autoResizeTextarea();
