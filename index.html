@@ -8,57 +8,88 @@
   <link rel="stylesheet" href="styles.css" />
 
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-
   <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
 
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 </head>
 <body>
-  
-<div class="nova-wrapper">
-<div class="app">
 
-  <!-- SIDEBAR -->
-  <aside class="sidebar">
-    <h2>chatNOVAP</h2>
+  <div class="nova-wrapper">
+    <div class="app">
 
-    <button id="newChatBtn" class="new-chat" type="button">
-      + Nueva conversación
-    </button>
+      <!-- SIDEBAR -->
+      <aside class="sidebar" aria-label="Barra lateral de conversaciones">
+        <div class="sidebar-header">
+          <h2>chatNOVAP</h2>
 
-    <div id="chatList" class="chat-list"></div>
-  </aside>
+          <button id="newChatBtn" class="new-chat" type="button" aria-label="Crear nueva conversación">
+            + Nueva conversación
+          </button>
+        </div>
 
-  <!-- MAIN -->
-  <main class="chat-area">
+        <div
+          id="chatList"
+          class="chat-list"
+          role="list"
+          aria-label="Lista de conversaciones"
+        ></div>
+      </aside>
 
-    <div id="messages" class="messages"></div>
+      <!-- MAIN -->
+      <main class="chat-area" aria-label="Área principal del chat">
 
-    <div class="input-area">
-      <textarea 
-        id="inputMessage"
-        placeholder="Escribe tu mensaje a NOVA... (Shift + Enter para salto de línea)"
-        autocomplete="off"
-        rows="1"
-      ></textarea>
+        <header class="chat-header" aria-label="Cabecera del chat">
+          <div class="chat-header-info">
+            <h1 class="chat-title">NOVA</h1>
+            <p class="chat-subtitle" id="chatStatusText">Lista para conversar</p>
+          </div>
+        </header>
 
-      <button id="readLastBtn" type="button">
-        🔊 Leer
-      </button>
+        <section
+          id="messages"
+          class="messages"
+          aria-live="polite"
+          aria-label="Mensajes de la conversación"
+        ></section>
 
-      <button id="sendBtn" type="button">
-        Enviar
-      </button>
+        <div
+          id="typingIndicator"
+          class="typing-indicator hidden"
+          aria-live="polite"
+          aria-hidden="true"
+        >
+          <span class="typing-label">NOVA está pensando...</span>
+        </div>
+
+        <form id="chatForm" class="input-area" autocomplete="off">
+          <label for="inputMessage" class="sr-only">Escribe tu mensaje a NOVA</label>
+
+          <textarea
+            id="inputMessage"
+            name="message"
+            placeholder="Escribe tu mensaje a NOVA... (Shift + Enter para salto de línea)"
+            rows="1"
+            aria-label="Mensaje para NOVA"
+          ></textarea>
+
+          <div class="input-actions">
+            <button id="readLastBtn" type="button" aria-label="Leer la última respuesta">
+              🔊 Leer
+            </button>
+
+            <button id="sendBtn" type="submit" aria-label="Enviar mensaje">
+              Enviar
+            </button>
+          </div>
+        </form>
+
+      </main>
+
     </div>
+  </div>
 
-  </main>
+  <script src="app.js" defer></script>
 
-</div>
-</div> <!-- cierre nova-wrapper -->
-  
-<!-- Carga JS al final y con defer -->
-<script src="app.js" defer></script>
-  
 </body>
 </html>
