@@ -6,17 +6,64 @@
   font-family: Arial, sans-serif;
 }
 
-/* ================= BODY ================= */
+/* ================= BASE ================= */
+html,
+body {
+  height: 100%;
+}
+
 body {
   background: #111827;
   color: #e5e7eb;
-  height: 100vh;
+  min-height: 100vh;
+}
+
+button,
+textarea {
+  font: inherit;
+}
+
+button {
+  transition: background-color 0.2s ease, opacity 0.2s ease, transform 0.2s ease;
+}
+
+button:active {
+  transform: translateY(1px);
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ================= ACCESIBILIDAD ================= */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* ================= WRAPPER ================= */
+.nova-wrapper {
+  min-height: 100vh;
+  background: #111827;
 }
 
 /* ================= LAYOUT ================= */
 .app {
   display: flex;
   height: 100vh;
+  min-height: 100vh;
 }
 
 /* ================= SIDEBAR ================= */
@@ -27,12 +74,19 @@ body {
   border-right: 1px solid #1e293b;
   display: flex;
   flex-direction: column;
+  flex-shrink: 0;
+}
+
+.sidebar-header {
+  display: flex;
+  flex-direction: column;
 }
 
 .sidebar h2 {
   font-size: 18px;
   margin-bottom: 16px;
   color: #ffffff;
+  line-height: 1.2;
 }
 
 /* BOTÓN NUEVO CHAT */
@@ -45,6 +99,7 @@ body {
   color: white;
   cursor: pointer;
   margin-bottom: 12px;
+  font-weight: 700;
 }
 
 .new-chat:hover {
@@ -58,6 +113,7 @@ body {
   gap: 6px;
   overflow-y: auto;
   margin-top: 10px;
+  padding-right: 2px;
 }
 
 .chat-item {
@@ -66,6 +122,9 @@ body {
   cursor: pointer;
   background: transparent;
   font-size: 14px;
+  color: #e5e7eb;
+  border: 1px solid transparent;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
 .chat-item:hover {
@@ -74,6 +133,7 @@ body {
 
 .chat-item.active {
   background: #2b6bff;
+  color: #ffffff;
 }
 
 /* ================= CHAT AREA ================= */
@@ -82,24 +142,66 @@ body {
   display: flex;
   flex-direction: column;
   background: #111827;
+  min-width: 0;
+}
+
+/* ================= CABECERA ================= */
+.chat-header {
+  border-bottom: 1px solid #1e293b;
+  background: #0f172a;
+  padding: 18px 24px;
+  flex-shrink: 0;
+}
+
+.chat-header-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.chat-title {
+  font-size: 20px;
+  color: #ffffff;
+  line-height: 1.2;
+}
+
+.chat-subtitle {
+  font-size: 13px;
+  color: #94a3b8;
+  line-height: 1.4;
 }
 
 /* ================= MENSAJES ================= */
 .messages {
   flex: 1;
   overflow-y: auto;
-  padding: 32px;
+  padding: 24px 32px;
   display: flex;
   flex-direction: column;
+  gap: 2px;
+  scroll-behavior: smooth;
+}
+
+/* ================= INDICADOR DE ESCRITURA ================= */
+.typing-indicator {
+  padding: 0 32px 14px 32px;
+  color: #94a3b8;
+  font-size: 13px;
+  line-height: 1.4;
+  background: #111827;
+}
+
+.typing-label {
+  display: inline-block;
 }
 
 /* ================= BURBUJAS ================= */
 .message {
-  max-width: 600px;
+  max-width: 720px;
   padding: 12px 16px;
   margin-bottom: 16px;
   border-radius: 12px;
-  line-height: 1.5;
+  line-height: 1.6;
   font-size: 14px;
 
   /* 🔵 MEJORA REAL DE LECTURA */
@@ -112,6 +214,8 @@ body {
 .bot {
   background: #1f2a44;
   color: #e5e7eb;
+  align-self: flex-start;
+  border-bottom-left-radius: 4px;
 }
 
 /* USER */
@@ -119,25 +223,30 @@ body {
   background: #2b6bff;
   color: white;
   align-self: flex-end;
+  border-bottom-right-radius: 4px;
 }
 
 /* ================= INPUT (ADAPTADO A TEXTAREA PRO) ================= */
 .input-area {
   display: flex;
+  gap: 12px;
   padding: 16px;
   border-top: 1px solid #1e293b;
   background: #0b1220;
-  align-items: flex-end; /* Mantiene el botón abajo si el texto crece */
+  align-items: flex-end;
+  flex-shrink: 0;
 }
 
 .input-area textarea {
   flex: 1;
+  min-height: 50px;
+  max-height: 180px;
   padding: 14px;
   border-radius: 8px;
-  border: none;
+  border: 1px solid transparent;
   background: #1f2a44;
   color: white;
-  resize: none; /* Evita que deformen la web */
+  resize: none;
   font-family: Arial, sans-serif;
   font-size: 15px;
   line-height: 1.5;
@@ -145,8 +254,22 @@ body {
   overflow-y: auto;
 }
 
+.input-area textarea:focus {
+  border-color: #2b6bff;
+}
+
+.input-area textarea::placeholder {
+  color: #94a3b8;
+}
+
+.input-actions {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  flex-shrink: 0;
+}
+
 .input-area button {
-  margin-left: 12px;
   padding: 14px 20px;
   border-radius: 8px;
   border: none;
@@ -154,7 +277,7 @@ body {
   color: white;
   font-weight: bold;
   cursor: pointer;
-  height: 50px; /* Misma altura que el textarea */
+  height: 50px;
 }
 
 .input-area button:hover {
@@ -223,15 +346,15 @@ body {
 .message.bot pre {
   margin: 16px 0;
   border-radius: 8px;
-  overflow: hidden; /* Corta los bordes para que Highlight.js no se salga */
-  background-color: #0d1117; /* Fondo oscuro de github-dark */
+  overflow: hidden;
+  background-color: #0d1117;
 }
 
 .message.bot pre code {
   display: block;
   padding: 16px;
   overflow-x: auto;
-  font-family: 'Courier New', Courier, monospace;
+  font-family: "Courier New", Courier, monospace;
   font-size: 14px;
   line-height: 1.5;
 }
@@ -282,19 +405,81 @@ body {
 }
 
 /* ================= BOTÓN VOZ MANUAL NOVA ================= */
-
 #readLastBtn {
-  margin-left: 12px;
-  padding: 14px 18px;
-  border-radius: 8px;
-  border: none;
   background: #1f2a44;
   color: white;
-  font-weight: bold;
-  cursor: pointer;
-  height: 50px;
 }
 
 #readLastBtn:hover {
   background: #2b3a5e;
+}
+
+/* ================= RESPONSIVE ================= */
+@media (max-width: 900px) {
+  .sidebar {
+    width: 220px;
+  }
+
+  .messages {
+    padding: 20px;
+  }
+
+  .typing-indicator {
+    padding: 0 20px 12px 20px;
+  }
+
+  .chat-header {
+    padding: 16px 20px;
+  }
+}
+
+@media (max-width: 720px) {
+  .app {
+    flex-direction: column;
+    height: 100vh;
+  }
+
+  .sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid #1e293b;
+    max-height: 220px;
+  }
+
+  .chat-list {
+    max-height: 120px;
+  }
+
+  .chat-header {
+    padding: 14px 16px;
+  }
+
+  .messages {
+    padding: 16px;
+  }
+
+  .typing-indicator {
+    padding: 0 16px 10px 16px;
+  }
+
+  .message {
+    max-width: 100%;
+  }
+
+  .input-area {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .input-actions {
+    width: 100%;
+  }
+
+  .input-actions button {
+    flex: 1;
+  }
+
+  .input-area textarea {
+    width: 100%;
+  }
 }
