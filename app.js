@@ -8,6 +8,8 @@ const chatForm = document.getElementById("chatForm");
 const typingIndicatorEl = document.getElementById("typingIndicator");
 const chatStatusTextEl = document.getElementById("chatStatusText");
 const voiceInputBtn = document.getElementById("voiceInputBtn");
+const voiceStatusEl = document.getElementById("voiceStatus");
+const voiceStatusTextEl = document.getElementById("voiceStatusText");
 
 /* ---------- API LOCAL / RED DEFINITIVA ---------- */
 
@@ -244,6 +246,14 @@ function setVoiceButtonState(listening) {
   voiceInputBtn.classList.toggle("listening", listening);
   voiceInputBtn.setAttribute("aria-pressed", listening ? "true" : "false");
   voiceInputBtn.textContent = listening ? "🔴 Escuchando" : "🎤 Hablar";
+}
+
+function setVoiceStatus(visible, text = "Escuchando...") {
+  if (!voiceStatusEl || !voiceStatusTextEl) return;
+
+  voiceStatusEl.classList.toggle("hidden", !visible);
+  voiceStatusEl.setAttribute("aria-hidden", visible ? "false" : "true");
+  voiceStatusTextEl.textContent = text;
 }
 
 /* ---------- PERSISTENCIA ---------- */
@@ -512,16 +522,19 @@ function setupVoiceRecognition() {
 
   recognition.onstart = () => {
     setVoiceButtonState(true);
+    setVoiceStatus(true, "Escuchando...");
     setChatStatus("Escuchando...");
   };
 
   recognition.onend = () => {
     setVoiceButtonState(false);
+    setVoiceStatus(false);
     setChatStatus(DEFAULT_READY_STATUS);
   };
 
   recognition.onerror = () => {
     setVoiceButtonState(false);
+    setVoiceStatus(false);
     setChatStatus(DEFAULT_READY_STATUS);
   };
 
@@ -800,3 +813,4 @@ setTypingIndicator(false);
 autoResizeTextarea();
 setupVoiceRecognition();
 setVoiceButtonState(false);
+setVoiceStatus(false);
