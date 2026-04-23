@@ -195,6 +195,19 @@ button:disabled {
   display: inline-block;
 }
 
+/* ================= ESTADO DE VOZ ================= */
+.voice-status {
+  padding: 0 32px 14px 32px;
+  color: #94a3b8;
+  font-size: 13px;
+  line-height: 1.4;
+  background: #111827;
+}
+
+#voiceStatusText {
+  display: inline-block;
+}
+
 /* ================= BURBUJAS ================= */
 .message {
   max-width: 720px;
@@ -442,6 +455,10 @@ button:disabled {
     padding: 0 20px 12px 20px;
   }
 
+  .voice-status {
+    padding: 0 20px 12px 20px;
+  }
+
   .chat-header {
     padding: 16px 20px;
   }
@@ -473,6 +490,10 @@ button:disabled {
   }
 
   .typing-indicator {
+    padding: 0 16px 10px 16px;
+  }
+
+  .voice-status {
     padding: 0 16px 10px 16px;
   }
 
