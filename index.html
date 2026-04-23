@@ -62,6 +62,15 @@
           <span class="typing-label">NOVA está pensando...</span>
         </div>
 
+        <div
+          id="voiceStatus"
+          class="voice-status hidden"
+          aria-live="polite"
+          aria-hidden="true"
+        >
+          <span id="voiceStatusText">Escuchando...</span>
+        </div>
+
         <form id="chatForm" class="input-area" autocomplete="off">
           <label for="inputMessage" class="sr-only">Escribe tu mensaje a NOVA</label>
 
@@ -74,6 +83,10 @@
           ></textarea>
 
           <div class="input-actions">
+            <button id="voiceBtn" type="button" aria-label="Hablar con NOVA">
+              🎤 Hablar
+            </button>
+
             <button id="readLastBtn" type="button" aria-label="Leer la última respuesta">
               🔊 Leer
             </button>
