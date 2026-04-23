@@ -7,6 +7,7 @@ const chatListEl = document.getElementById("chatList");
 const chatForm = document.getElementById("chatForm");
 const typingIndicatorEl = document.getElementById("typingIndicator");
 const chatStatusTextEl = document.getElementById("chatStatusText");
+const voiceInputBtn = document.getElementById("voiceInputBtn");
 
 /* ---------- API LOCAL / RED DEFINITIVA ---------- */
 
@@ -43,6 +44,8 @@ const MAX_TEXTAREA_HEIGHT = 180;
 let chats = [];
 let activeChatId = null;
 let isSending = false;
+let recognition = null;
+let isListening = false;
 
 /* ---------- HELPERS BASE ---------- */
 
@@ -211,6 +214,10 @@ function setSendingState(sending) {
     inputEl.disabled = sending;
   }
 
+  if (voiceInputBtn) {
+    voiceInputBtn.disabled = sending;
+  }
+
   setTypingIndicator(sending);
   setChatStatus(sending ? DEFAULT_THINKING_STATUS : DEFAULT_READY_STATUS);
 }
@@ -227,6 +234,16 @@ function scrollMessagesToBottom() {
   requestAnimationFrame(() => {
     messagesEl.scrollTop = messagesEl.scrollHeight;
   });
+}
+
+function setVoiceButtonState(listening) {
+  isListening = listening;
+
+  if (!voiceInputBtn) return;
+
+  voiceInputBtn.classList.toggle("listening", listening);
+  voiceInputBtn.setAttribute("aria-pressed", listening ? "true" : "false");
+  voiceInputBtn.textContent = listening ? "🔴 Escuchando" : "🎤 Hablar";
 }
 
 /* ---------- PERSISTENCIA ---------- */
@@ -475,6 +492,65 @@ function readLastBotMessage() {
   window.speechSynthesis.speak(utterance);
 }
 
+/* ---------- VOZ DE ENTRADA ---------- */
+
+function setupVoiceRecognition() {
+  const SpeechRecognition =
+    window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  if (!SpeechRecognition || !voiceInputBtn) {
+    if (voiceInputBtn) {
+      voiceInputBtn.style.display = "none";
+    }
+    return;
+  }
+
+  recognition = new SpeechRecognition();
+  recognition.lang = "es-ES";
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+
+  recognition.onstart = () => {
+    setVoiceButtonState(true);
+    setChatStatus("Escuchando...");
+  };
+
+  recognition.onend = () => {
+    setVoiceButtonState(false);
+    setChatStatus(DEFAULT_READY_STATUS);
+  };
+
+  recognition.onerror = () => {
+    setVoiceButtonState(false);
+    setChatStatus(DEFAULT_READY_STATUS);
+  };
+
+  recognition.onresult = event => {
+    const transcript = event.results?.[0]?.[0]?.transcript || "";
+    const text = transcript.trim();
+
+    if (!text || !inputEl) return;
+
+    inputEl.value = inputEl.value
+      ? `${inputEl.value.trim()} ${text}`.trim()
+      : text;
+
+    autoResizeTextarea();
+    inputEl.focus();
+  };
+}
+
+function toggleVoiceInput() {
+  if (!recognition || isSending) return;
+
+  if (isListening) {
+    recognition.stop();
+    return;
+  }
+
+  recognition.start();
+}
+
 /* ---------- CHATS ---------- */
 
 function createNewChat() {
@@ -683,6 +759,13 @@ if (readLastBtn) {
   });
 }
 
+if (voiceInputBtn) {
+  voiceInputBtn.addEventListener("click", event => {
+    event.preventDefault();
+    toggleVoiceInput();
+  });
+}
+
 if (inputEl) {
   inputEl.addEventListener("input", () => {
     autoResizeTextarea();
@@ -715,3 +798,5 @@ renderMessages();
 setChatStatus(DEFAULT_READY_STATUS);
 setTypingIndicator(false);
 autoResizeTextarea();
+setupVoiceRecognition();
+setVoiceButtonState(false);
