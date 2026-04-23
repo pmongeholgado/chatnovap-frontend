@@ -47,7 +47,7 @@ let isSending = false;
 /* ---------- HELPERS BASE ---------- */
 
 function generateChatId() {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
 function getActiveChat() {
@@ -90,22 +90,62 @@ function normalizeMessage(messageOrText, sender) {
   };
 }
 
+function createWelcomeMessage() {
+  return {
+    text: DEFAULT_WELCOME_MESSAGE,
+    sender: "bot",
+    imageUrl: null,
+    audioUrl: null,
+    chartUrl: null
+  };
+}
+
 function ensureChatShape(chat) {
+  const normalizedMessages = Array.isArray(chat?.messages)
+    ? chat.messages.map(message => normalizeMessage(message, message?.sender || "bot"))
+    : [];
+
   return {
     id: chat?.id ? String(chat.id) : generateChatId(),
     title:
       typeof chat?.title === "string" && chat.title.trim()
         ? chat.title.trim()
         : DEFAULT_CHAT_TITLE,
-    messages: Array.isArray(chat?.messages)
-      ? chat.messages.map(message => normalizeMessage(message, message?.sender || "bot"))
-      : []
+    messages: normalizedMessages.length ? normalizedMessages : [createWelcomeMessage()],
+    createdAt: Number(chat?.createdAt) || Date.now(),
+    updatedAt: Number(chat?.updatedAt) || Date.now()
   };
 }
 
 function ensureChatsShape(rawChats) {
   if (!Array.isArray(rawChats)) return [];
-  return rawChats.map(ensureChatShape);
+
+  const cleanChats = rawChats.map(ensureChatShape);
+
+  const unique = new Map();
+  cleanChats.forEach(chat => {
+    unique.set(chat.id, chat);
+  });
+
+  return Array.from(unique.values()).sort((a, b) => b.updatedAt - a.updatedAt);
+}
+
+function touchChat(chat) {
+  if (!chat) return;
+  chat.updatedAt = Date.now();
+}
+
+function moveChatToTop(chatId) {
+  const index = chats.findIndex(chat => chat.id === chatId);
+  if (index <= 0) return;
+  const [chat] = chats.splice(index, 1);
+  chats.unshift(chat);
+}
+
+function persistAndRefresh() {
+  saveState();
+  renderChatList();
+  renderMessages();
 }
 
 /* ---------- ESTADO VISUAL ---------- */
@@ -155,7 +195,8 @@ function scrollMessagesToBottom() {
 
 function saveState() {
   try {
-    localStorage.setItem(STORAGE_CHATS_KEY, JSON.stringify(chats));
+    const orderedChats = [...chats].sort((a, b) => b.updatedAt - a.updatedAt);
+    localStorage.setItem(STORAGE_CHATS_KEY, JSON.stringify(orderedChats));
     localStorage.setItem(STORAGE_ACTIVE_KEY, activeChatId || "");
   } catch (error) {
     console.error("chatNOVAP saveState error:", error);
@@ -173,6 +214,19 @@ function loadState() {
     console.error("chatNOVAP loadState error:", error);
     chats = [];
     activeChatId = null;
+  }
+}
+
+function ensureActiveChatExists() {
+  if (!chats.length) {
+    createNewChat();
+    return;
+  }
+
+  const exists = chats.some(chat => chat.id === activeChatId);
+
+  if (!activeChatId || !exists) {
+    activeChatId = chats[0].id;
   }
 }
 
@@ -347,6 +401,8 @@ function renderChatList() {
 
       if (typeof newTitle === "string" && newTitle.trim()) {
         chat.title = newTitle.trim();
+        touchChat(chat);
+        moveChatToTop(chat.id);
         saveState();
         renderChatList();
       }
@@ -387,25 +443,19 @@ function readLastBotMessage() {
 
 /* ---------- CHATS ---------- */
 
-function createWelcomeMessage() {
-  return {
-    text: DEFAULT_WELCOME_MESSAGE,
-    sender: "bot",
-    imageUrl: null,
-    audioUrl: null,
-    chartUrl: null
-  };
-}
-
 function createNewChat() {
   const id = generateChatId();
+  const now = Date.now();
 
-  chats.unshift({
+  const newChat = {
     id,
     title: DEFAULT_CHAT_TITLE,
-    messages: [createWelcomeMessage()]
-  });
+    messages: [createWelcomeMessage()],
+    createdAt: now,
+    updatedAt: now
+  };
 
+  chats.unshift(newChat);
   activeChatId = id;
 
   saveState();
@@ -494,6 +544,8 @@ async function sendMessage() {
   };
 
   chat.messages.push(userMessage);
+  touchChat(chat);
+  moveChatToTop(chat.id);
 
   if (chat.title === DEFAULT_CHAT_TITLE) {
     chat.title = buildChatTitleFromText(text);
@@ -524,11 +576,16 @@ async function sendMessage() {
     };
 
     targetChat.messages.push(botMessage);
+    touchChat(targetChat);
+    moveChatToTop(targetChat.id);
 
     saveState();
 
     if (activeChatId === requestChatId) {
+      renderChatList();
       renderMessages();
+    } else {
+      renderChatList();
     }
 
     if (normalized.audioUrl) {
@@ -552,10 +609,15 @@ async function sendMessage() {
         chartUrl: null
       });
 
+      touchChat(targetChat);
+      moveChatToTop(targetChat.id);
       saveState();
 
       if (activeChatId === requestChatId) {
+        renderChatList();
         renderMessages();
+      } else {
+        renderChatList();
       }
     }
   } finally {
@@ -612,19 +674,10 @@ if (newChatBtn) {
 /* ---------- INIT ---------- */
 
 loadState();
-
-if (!chats.length) {
-  createNewChat();
-} else {
-  if (!activeChatId || !chats.find(chat => chat.id === activeChatId)) {
-    activeChatId = chats[0].id;
-  }
-
-  saveState();
-  renderChatList();
-  renderMessages();
-  setChatStatus(DEFAULT_READY_STATUS);
-}
-
+ensureActiveChatExists();
+saveState();
+renderChatList();
+renderMessages();
+setChatStatus(DEFAULT_READY_STATUS);
 setTypingIndicator(false);
 autoResizeTextarea();
