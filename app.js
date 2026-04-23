@@ -65,9 +65,27 @@ function safeTrim(text) {
   return typeof text === "string" ? text.trim() : "";
 }
 
+function cleanChatTitle(text) {
+  let value = safeTrim(text);
+
+  if (!value) {
+    return DEFAULT_CHAT_TITLE;
+  }
+
+  value = value
+    .replace(/\s+/g, " ")
+    .replace(/^[-–—:;,.!?¿¡#*_`~|[\](){}\\/\s]+/, "")
+    .trim();
+
+  if (!value) {
+    return DEFAULT_CHAT_TITLE;
+  }
+
+  return value.slice(0, MAX_CHAT_TITLE_LENGTH).trim() || DEFAULT_CHAT_TITLE;
+}
+
 function buildChatTitleFromText(text) {
-  const trimmed = safeTrim(text);
-  return trimmed ? trimmed.slice(0, MAX_CHAT_TITLE_LENGTH) : DEFAULT_CHAT_TITLE;
+  return cleanChatTitle(text);
 }
 
 function normalizeMessage(messageOrText, sender) {
@@ -100,17 +118,37 @@ function createWelcomeMessage() {
   };
 }
 
+function getFirstUserMessageTitle(messages) {
+  if (!Array.isArray(messages)) return DEFAULT_CHAT_TITLE;
+
+  const firstUserMessage = messages.find(
+    message => message.sender === "user" && safeTrim(message.text)
+  );
+
+  if (!firstUserMessage) {
+    return DEFAULT_CHAT_TITLE;
+  }
+
+  return buildChatTitleFromText(firstUserMessage.text);
+}
+
 function ensureChatShape(chat) {
   const normalizedMessages = Array.isArray(chat?.messages)
     ? chat.messages.map(message => normalizeMessage(message, message?.sender || "bot"))
     : [];
 
+  let title =
+    typeof chat?.title === "string" && chat.title.trim()
+      ? cleanChatTitle(chat.title)
+      : DEFAULT_CHAT_TITLE;
+
+  if (title === DEFAULT_CHAT_TITLE) {
+    title = getFirstUserMessageTitle(normalizedMessages);
+  }
+
   return {
     id: chat?.id ? String(chat.id) : generateChatId(),
-    title:
-      typeof chat?.title === "string" && chat.title.trim()
-        ? chat.title.trim()
-        : DEFAULT_CHAT_TITLE,
+    title,
     messages: normalizedMessages.length ? normalizedMessages : [createWelcomeMessage()],
     createdAt: Number(chat?.createdAt) || Date.now(),
     updatedAt: Number(chat?.updatedAt) || Date.now()
@@ -344,17 +382,13 @@ function renderMessages() {
 }
 
 function getChatDisplayTitle(chat) {
-  if (chat.title && chat.title.trim()) return chat.title.trim();
+  const title = cleanChatTitle(chat?.title || "");
 
-  const firstUserMessage = chat.messages.find(
-    message => message.sender === "user" && safeTrim(message.text)
-  );
-
-  if (firstUserMessage) {
-    return buildChatTitleFromText(firstUserMessage.text);
+  if (title !== DEFAULT_CHAT_TITLE) {
+    return title;
   }
 
-  return DEFAULT_CHAT_TITLE;
+  return getFirstUserMessageTitle(chat?.messages);
 }
 
 /* ---------- LISTA DE CHATS ---------- */
@@ -397,10 +431,10 @@ function renderChatList() {
     container.addEventListener("dblclick", () => {
       if (isSending) return;
 
-      const newTitle = prompt("Nuevo nombre:", chat.title);
+      const newTitle = prompt("Nuevo nombre:", getChatDisplayTitle(chat));
 
       if (typeof newTitle === "string" && newTitle.trim()) {
-        chat.title = newTitle.trim();
+        chat.title = cleanChatTitle(newTitle);
         touchChat(chat);
         moveChatToTop(chat.id);
         saveState();
