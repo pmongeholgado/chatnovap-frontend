@@ -203,8 +203,6 @@ button:disabled {
   border-radius: 12px;
   line-height: 1.6;
   font-size: 14px;
-
-  /* 🔵 MEJORA REAL DE LECTURA */
   white-space: pre-wrap;
   word-break: break-word;
   overflow-wrap: anywhere;
@@ -282,6 +280,22 @@ button:disabled {
 
 .input-area button:hover {
   background: #3b7cff;
+}
+
+/* ================= VOZ NORMAL ================= */
+#voiceInputBtn {
+  background: #1f2a44;
+  color: white;
+  min-width: 110px;
+}
+
+#voiceInputBtn:hover {
+  background: #2b3a5e;
+}
+
+#voiceInputBtn.listening {
+  background: #dc2626;
+  color: #ffffff;
 }
 
 /* ================= MARKDOWN PRO (ESTRUCTURA VISUAL GEMINI) ================= */
